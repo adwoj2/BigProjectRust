@@ -1,23 +1,15 @@
 use crate::item::Item;
+use crate::item::ItemSlot;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Eq, Hash, PartialEq, Serialize, Deserialize, Debug, Clone)]
-pub enum Slot {
-    Head,
-    Body,
-    Boots,
-    MainHand,
-    OffHand,
-    Trinket,
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Inventory {
-    pub equipped: HashMap<Slot, Item>, // prosty mapping slot_name -> item
+    pub equipped: HashMap<ItemSlot, Item>,
     pub backpack: Vec<Item>,
 }
 
+// Unused yet
 impl Inventory {
     pub fn new() -> Self {
         Self {
@@ -26,12 +18,11 @@ impl Inventory {
         }
     }
 
-    pub fn equip(&mut self, slot: Slot, item: Item) -> Option<Item> {
-        // przekazanie wÅ‚asności itema do ekwipunku
+    pub fn equip(&mut self, slot: ItemSlot, item: Item) -> Option<Item> {
         self.equipped.insert(slot, item)
     }
 
-    pub fn unequip(&mut self, slot: Slot) -> Option<Item> {
+    pub fn unequip(&mut self, slot: ItemSlot) -> Option<Item> {
         self.equipped.remove(&slot)
     }
 

@@ -1,7 +1,8 @@
 use crate::effect::Effect;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+// Unused yet
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ItemSlot {
     Head,
     Body,

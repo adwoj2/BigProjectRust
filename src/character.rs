@@ -35,12 +35,6 @@ pub struct Hero {
     pub effects: Vec<Effect>,
 }
 
-impl Hero {
-    pub fn take_damage(&mut self, amount: i32) {
-        self.stats.hp = (self.stats.hp - amount).max(0);
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Enemy {
     pub id: u32,
@@ -57,6 +51,6 @@ pub struct Ability {
     pub name: String,
     pub description: String,
     pub damage_modifier: f32,
-    pub effect: Option<Effect>, // optional effect on target
-    pub range: i32,             // number of hexes
+    pub effect: Option<Effect>,
+    pub range: i32,
 }

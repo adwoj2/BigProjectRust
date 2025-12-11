@@ -12,7 +12,7 @@ pub fn enemy_ai(battle: &mut BattleState, enemy_index: usize) {
     battle.enemies[enemy_index].hex = target_hex;
     battle.update_occupied_hexes();
 
-    let mut attackable_heroes: Vec<usize> = battle
+    let attackable_heroes: Vec<usize> = battle
         .heroes
         .iter()
         .enumerate()
@@ -103,7 +103,7 @@ fn enemy_ai_can_attack_hero(battle: &BattleState, enemy_index: usize, hero_index
     let enemy_hex = battle.enemies[enemy_index].hex;
     let hero_hex = battle.heroes[hero_index].hex;
 
-    enemy_hex.is_adjacent(hero_hex)
+    enemy_hex.is_adjacent(hero_hex, battle.grid_boundary())
 }
 
 fn enemy_ai_attack_hero(battle: &mut BattleState, enemy_index: usize, hero_index: usize) {
@@ -112,5 +112,4 @@ fn enemy_ai_attack_hero(battle: &mut BattleState, enemy_index: usize, hero_index
         &UnitRef::Hero(hero_index),
         1.0,
     );
-    println!("Enemy {} attacks Hero {}!", enemy_index, hero_index);
 }

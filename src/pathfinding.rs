@@ -22,14 +22,12 @@ pub fn movement_range(
     frontier.push_back((start, 0, vec![start]));
 
     while let Some((hex, dist, path)) = frontier.pop_front() {
-        // If we visited with a smaller or equal cost already, skip
         if visited.contains_key(&hex) || !battle.is_passable_for_unit(start, hex) {
             continue;
         }
 
         visited.insert(hex, (dist, path.clone()));
 
-        // Stop expanding this node if we've hit movement budget
         if dist >= movement {
             continue;
         }
@@ -46,9 +44,7 @@ pub fn movement_range(
     visited
 }
 
-/// Hex neighbors for an odd-q vertical layout (keeps original odd/even logic).
 pub fn hex_neighbors(hex: Hex, grid_boundary: Hex) -> Vec<Hex> {
-    // directions for even q and odd q (matching your original code)
     const DIRECTIONS_EVEN: [(i32, i32); 6] = [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 0), (-1, -1)];
 
     const DIRECTIONS_ODD: [(i32, i32); 6] = [(0, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0)];
@@ -69,8 +65,6 @@ pub fn hex_neighbors(hex: Hex, grid_boundary: Hex) -> Vec<Hex> {
         .collect()
 }
 
-/// BFS shortest path that returns the sequence of Hex from start to goal (inclusive).
-/// Returns an empty vector if no path exists.
 pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex, battle: &BattleState) -> Vec<Hex> {
     use std::collections::{HashMap, VecDeque};
 
@@ -91,13 +85,11 @@ pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex, battle: &BattleState)
                 continue;
             }
 
-            // mark predecessor and visited
             came_from.insert(neighbor, current);
             visited.insert(neighbor);
             frontier.push_back(neighbor);
 
             if neighbor == goal {
-                // reconstruct path
                 let mut path = Vec::new();
                 let mut cur = goal;
                 path.push(cur);
@@ -111,6 +103,5 @@ pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex, battle: &BattleState)
         }
     }
 
-    // no path found
     vec![]
 }

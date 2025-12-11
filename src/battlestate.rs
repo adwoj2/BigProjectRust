@@ -1,9 +1,8 @@
 use crate::ai::{enemy_ai, hex_distance};
-use crate::character::{Ability, Enemy, Hero};
+use crate::character::{Ability, Enemy};
 use crate::gamestate::{Effect, GameState, Stats};
 use crate::hexgrid::Hex;
-use crate::pathfinding::{bfs_path, movement_range};
-use crate::ui::hex_to_screen;
+use crate::pathfinding::{movement_range};
 use ::rand::{thread_rng, Rng};
 use macroquad::prelude::*;
 use std::cmp::Reverse;
@@ -37,7 +36,7 @@ pub struct BattleState {
     pub enemies: Vec<EnemyInstance>,
 
     pub turn_order: Vec<UnitRef>,
-    pub active_unit: usize, // index into turn_order
+    pub active_unit: usize, // turn_order index
 
     pub phase: TurnPhase,
 
@@ -103,7 +102,6 @@ impl BattleState {
             }
 
             UnitRef::Enemy(idx) => {
-                // Enemies get their movement reset but no selection
                 let enemy = &mut self.enemies[idx];
                 enemy.current_movement = movement;
             }
@@ -162,6 +160,13 @@ impl BattleState {
             true
         } else {
             self.is_passable(hex)
+        }
+    }
+
+    pub fn grid_boundary(&self) -> Hex {
+        Hex {
+            q: self.grid_width - 1,
+            r: self.grid_height - 1,
         }
     }
 }
@@ -278,8 +283,8 @@ impl BattleState {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnitRef {
-    Hero(usize),  // index into battle.heroes
-    Enemy(usize), // index into battle.enemies
+    Hero(usize),
+    Enemy(usize),
 }
 
 #[derive(Debug, Clone)]
@@ -320,7 +325,7 @@ pub fn start_battle(state: &mut GameState) {
         .map(|hero| HeroInstance {
             id: hero.id,
             name: hero.name.clone(),
-            hex: Hex { q: 2, r: 3 }, // default start pos for testing
+            hex: Hex { q: 2, r: 3 }, // for testing
             stats: hero.stats.clone(),
             action_available: true,
             abilities: hero.abilities.clone(),
@@ -353,14 +358,14 @@ pub fn start_battle(state: &mut GameState) {
         Enemy {
             id: 0,
             name: "Goblin".to_string(),
-            hex: Hex { q: 7, r: 5 },
+            hex: Hex { q: 7, r: 5 }, // for testing
             stats: goblin_stats,
             effects: Vec::new(),
         },
         Enemy {
             id: 1,
             name: "Orc".to_string(),
-            hex: Hex { q: 8, r: 6 },
+            hex: Hex { q: 8, r: 6 }, // for testing
             stats: orc_stats,
             effects: Vec::new(),
         },
@@ -400,6 +405,7 @@ pub fn start_battle(state: &mut GameState) {
 
     generate_turn_order(&mut battle);
 
+    // for testing terrain
     battle
         .terrain
         .insert(Hex { q: 3, r: 4 }, TerrainType::Rocks);

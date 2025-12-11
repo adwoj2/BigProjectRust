@@ -16,7 +16,6 @@ use crate::hexgrid::Hex;
 use crate::inventory::Inventory;
 use crate::ui::Assets;
 use gamestate::GameState;
-use macroquad::prelude::*;
 
 #[macroquad::main("BigTask")]
 async fn main() {
@@ -37,7 +36,7 @@ async fn main() {
     let melee = Ability {
         id: 0,
         name: "Slash".to_string(),
-        description: "A quick melee attack.".to_string(),
+        description: "A powerful melee attack.".to_string(),
         damage_modifier: 1.5,
         effect: None,
         range: 1,
