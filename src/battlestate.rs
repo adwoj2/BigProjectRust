@@ -1,13 +1,13 @@
-use crate::gamestate::{GameState, Stats, Effect};
+use crate::ai::{enemy_ai, hex_distance};
+use crate::character::{Ability, Enemy, Hero};
+use crate::gamestate::{Effect, GameState, Stats};
 use crate::hexgrid::Hex;
-use crate::character::{Hero, Enemy, Ability};
-use crate::pathfinding::{movement_range, bfs_path};
-use crate::ai::{hex_distance, enemy_ai};
-use macroquad::prelude::*;
-use std::collections::{HashMap, HashSet};
-use std::cmp::Reverse;
-use ::rand::{Rng, thread_rng};
+use crate::pathfinding::{bfs_path, movement_range};
 use crate::ui::hex_to_screen;
+use ::rand::{thread_rng, Rng};
+use macroquad::prelude::*;
+use std::cmp::Reverse;
+use std::collections::{HashMap, HashSet};
 
 type AbilityId = usize;
 
@@ -15,10 +15,7 @@ type AbilityId = usize;
 pub enum InputMode {
     Normal,
     Movement,
-    AbilityTarget {  
-        hero_idx: usize,
-        ability_idx: usize,
-    },
+    AbilityTarget { hero_idx: usize, ability_idx: usize },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -76,9 +73,8 @@ impl BattleState {
             UnitRef::Hero(i) => self.heroes[i].stats.movement,
             UnitRef::Enemy(i) => self.enemies[i].stats.movement,
         }
-    }   
+    }
 }
-
 
 impl BattleState {
     pub fn tick(&mut self) {
@@ -102,7 +98,7 @@ impl BattleState {
                 let hex = self.heroes[idx].hex;
                 self.selected_unit = Some(unit);
                 self.selected_unit_range = movement_range(hex, movement, self.grid_bounds(), &self);
-                
+
                 self.input_mode = InputMode::Movement;
             }
 
@@ -138,7 +134,10 @@ impl BattleState {
     }
 
     fn grid_bounds(&self) -> Hex {
-        Hex { q: self.grid_width - 1, r: self.grid_height - 1 }
+        Hex {
+            q: self.grid_width - 1,
+            r: self.grid_height - 1,
+        }
     }
 }
 
@@ -155,13 +154,12 @@ impl BattleState {
     }
 
     pub fn is_passable(&self, hex: Hex) -> bool {
-        !self.terrain.contains_key(&hex) &&
-        !self.occupied_hexes.contains(&hex)
+        !self.terrain.contains_key(&hex) && !self.occupied_hexes.contains(&hex)
     }
 
     pub fn is_passable_for_unit(&self, start: Hex, hex: Hex) -> bool {
         if hex == start {
-            true 
+            true
         } else {
             self.is_passable(hex)
         }
@@ -189,13 +187,15 @@ impl BattleState {
         } else {
             (1.0 - (attack_vs_defense as f32) * 0.05).max(0.3)
         };
-        
-        
+
         let mut rng = thread_rng();
         let base_damage = rng.gen_range(attacker_stats.damage.0..=attacker_stats.damage.1) as f32;
         let damage = (base_damage * attack_modifier * damage_multiplier).round() as i32;
 
-        println!("Attack vs Defense: {}, Modifier: {:.2}, base damage: {:.2}, final damage: {}", attack_vs_defense, attack_modifier, base_damage, damage);
+        println!(
+            "Attack vs Defense: {}, Modifier: {:.2}, base damage: {:.2}, final damage: {}",
+            attack_vs_defense, attack_modifier, base_damage, damage
+        );
 
         target_stats.hp = (target_stats.hp - damage).max(0);
         //Needs bugfix so that the game won't crash
@@ -220,10 +220,12 @@ impl BattleState {
         //     self.update_occupied_hexes();
         // }
 
-        println!("{} attacks {} for {} damage!", 
-            self.unit_name(attacker), 
-            self.unit_name(target), 
-            damage);
+        println!(
+            "{} attacks {} for {} damage!",
+            self.unit_name(attacker),
+            self.unit_name(target),
+            damage
+        );
     }
 }
 
@@ -252,33 +254,32 @@ impl BattleState {
 
 impl BattleState {
     pub fn hero_use_ability(&mut self, hero_idx: usize, ability_idx: usize, target_hex: Hex) {
-    let ability_range = self.heroes[hero_idx].abilities[ability_idx].range;
-    let damage = self.heroes[hero_idx].abilities[ability_idx].damage_modifier;
-    let effect = self.heroes[hero_idx].abilities[ability_idx].effect.clone();
-    let hero_hex = self.heroes[hero_idx].hex;
+        let ability_range = self.heroes[hero_idx].abilities[ability_idx].range;
+        let damage = self.heroes[hero_idx].abilities[ability_idx].damage_modifier;
+        let effect = self.heroes[hero_idx].abilities[ability_idx].effect.clone();
+        let hero_hex = self.heroes[hero_idx].hex;
 
-    if hex_distance(hero_hex, target_hex) > ability_range {
-        return;
-    }
-
-    if let Some(enemy_idx) = self.enemies.iter().position(|e| e.hex == target_hex) {
-        self.attack_unit(&UnitRef::Hero(hero_idx), &UnitRef::Enemy(enemy_idx), damage);
-
-        if let Some(eff) = effect {
-            self.enemies[enemy_idx].effects.push(eff);
+        if hex_distance(hero_hex, target_hex) > ability_range {
+            return;
         }
 
-        self.heroes[hero_idx].action_available = false;
-        self.selected_ability = None;
+        if let Some(enemy_idx) = self.enemies.iter().position(|e| e.hex == target_hex) {
+            self.attack_unit(&UnitRef::Hero(hero_idx), &UnitRef::Enemy(enemy_idx), damage);
+
+            if let Some(eff) = effect {
+                self.enemies[enemy_idx].effects.push(eff);
+            }
+
+            self.heroes[hero_idx].action_available = false;
+            self.selected_ability = None;
+        }
     }
 }
-}
-
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum UnitRef {
-    Hero(usize),   // index into battle.heroes
-    Enemy(usize),  // index into battle.enemies
+    Hero(usize),  // index into battle.heroes
+    Enemy(usize), // index into battle.enemies
 }
 
 #[derive(Debug, Clone)]
@@ -288,11 +289,10 @@ pub struct HeroInstance {
     pub hex: Hex,
     pub stats: Stats,
 
-    pub abilities : Vec<Ability>,
+    pub abilities: Vec<Ability>,
     pub effects: Vec<Effect>,
     pub current_movement: i32,
     pub action_available: bool,
-    
 
     pub texture: Texture2D,
 }
@@ -309,19 +309,26 @@ pub struct EnemyInstance {
 }
 
 pub fn start_battle(state: &mut GameState) {
-    let assets = state.assets.as_ref().expect("Assets must be loaded before starting a battle");
+    let assets = state
+        .assets
+        .as_ref()
+        .expect("Assets must be loaded before starting a battle");
 
-    let heroes_instance: Vec<HeroInstance> = state.player_party.iter().map(|hero| HeroInstance {
-        id: hero.id,
-        name: hero.name.clone(),
-        hex: Hex { q: 2, r: 3 }, // default start pos for testing
-        stats: hero.stats.clone(),
-        action_available: true,
-        abilities: hero.abilities.clone(),
-        current_movement: hero.stats.movement,
-        effects: Vec::new(),
-        texture: assets.hero.clone(),
-    }).collect();
+    let heroes_instance: Vec<HeroInstance> = state
+        .player_party
+        .iter()
+        .map(|hero| HeroInstance {
+            id: hero.id,
+            name: hero.name.clone(),
+            hex: Hex { q: 2, r: 3 }, // default start pos for testing
+            stats: hero.stats.clone(),
+            action_available: true,
+            abilities: hero.abilities.clone(),
+            current_movement: hero.stats.movement,
+            effects: Vec::new(),
+            texture: assets.hero.clone(),
+        })
+        .collect();
 
     let goblin_stats = Stats {
         max_hp: 30,
@@ -342,30 +349,35 @@ pub fn start_battle(state: &mut GameState) {
         movement: 2,
     };
 
-    let enemies = vec![Enemy {
-        id: 0,
-        name: "Goblin".to_string(),
-        hex: Hex { q: 7, r: 5 },
-        stats: goblin_stats,
-        effects: Vec::new(),
-    }, Enemy {
-        id: 1,
-        name: "Orc".to_string(),
-        hex: Hex { q: 8, r: 6 },
-        stats: orc_stats,
-        effects: Vec::new(),
-    }
+    let enemies = vec![
+        Enemy {
+            id: 0,
+            name: "Goblin".to_string(),
+            hex: Hex { q: 7, r: 5 },
+            stats: goblin_stats,
+            effects: Vec::new(),
+        },
+        Enemy {
+            id: 1,
+            name: "Orc".to_string(),
+            hex: Hex { q: 8, r: 6 },
+            stats: orc_stats,
+            effects: Vec::new(),
+        },
     ];
 
-    let enemies_instance: Vec<EnemyInstance> = enemies.into_iter().map(|enemy| EnemyInstance {
-        texture: assets.enemy.get(&enemy.name).unwrap().clone(),
-        id: enemy.id,
-        name: enemy.name,
-        hex: enemy.hex,
-        stats: enemy.stats.clone(),
-        current_movement: enemy.stats.movement,
-        effects: Vec::new(),
-    }).collect();
+    let enemies_instance: Vec<EnemyInstance> = enemies
+        .into_iter()
+        .map(|enemy| EnemyInstance {
+            texture: assets.enemy.get(&enemy.name).unwrap().clone(),
+            id: enemy.id,
+            name: enemy.name,
+            hex: enemy.hex,
+            stats: enemy.stats.clone(),
+            current_movement: enemy.stats.movement,
+            effects: Vec::new(),
+        })
+        .collect();
 
     let mut battle = BattleState {
         heroes: heroes_instance,
@@ -388,21 +400,31 @@ pub fn start_battle(state: &mut GameState) {
 
     generate_turn_order(&mut battle);
 
-
-    battle.terrain.insert(Hex { q: 3, r: 4 }, TerrainType::Rocks);
-    battle.terrain.insert(Hex { q: 4, r: 4 }, TerrainType::Rocks);
-    battle.terrain.insert(Hex { q: 5, r: 2 }, TerrainType::Rocks);
+    battle
+        .terrain
+        .insert(Hex { q: 3, r: 4 }, TerrainType::Rocks);
+    battle
+        .terrain
+        .insert(Hex { q: 4, r: 4 }, TerrainType::Rocks);
+    battle
+        .terrain
+        .insert(Hex { q: 5, r: 2 }, TerrainType::Rocks);
 
     state.battle = Some(battle);
-
 }
 
-
 pub fn generate_turn_order(battle: &mut BattleState) {
-    let mut units: Vec<(i32, UnitRef)> = battle.heroes.iter().enumerate()
+    let mut units: Vec<(i32, UnitRef)> = battle
+        .heroes
+        .iter()
+        .enumerate()
         .map(|(i, hero)| (hero.stats.initiative, UnitRef::Hero(i)))
         .chain(
-            battle.enemies.iter().enumerate().map(|(i, enemy)| (enemy.stats.initiative, UnitRef::Enemy(i)))
+            battle
+                .enemies
+                .iter()
+                .enumerate()
+                .map(|(i, enemy)| (enemy.stats.initiative, UnitRef::Enemy(i))),
         )
         .collect();
 

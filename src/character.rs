@@ -1,9 +1,9 @@
-use serde::{Serialize, Deserialize};
-use macroquad::prelude::*;
-use crate::inventory::Inventory;
-use crate::item::Item;
 use crate::effect::Effect;
 use crate::hexgrid::Hex;
+use crate::inventory::Inventory;
+use crate::item::Item;
+use macroquad::prelude::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
 pub enum Unit {
@@ -57,6 +57,6 @@ pub struct Ability {
     pub name: String,
     pub description: String,
     pub damage_modifier: f32,
-    pub effect: Option<Effect>,  // optional effect on target
-    pub range: i32,              // number of hexes
+    pub effect: Option<Effect>, // optional effect on target
+    pub range: i32,             // number of hexes
 }

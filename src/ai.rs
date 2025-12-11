@@ -1,30 +1,28 @@
-use crate::hexgrid::Hex;
 use crate::battlestate::{BattleState, UnitRef};
+use crate::hexgrid::Hex;
 use crate::pathfinding::bfs_path;
 use std::collections::HashSet;
 
 pub fn hex_distance(a: Hex, b: Hex) -> i32 {
-    ((a.q - b.q).abs()
-        + (a.q + a.r - b.q - b.r).abs()
-        + (a.r - b.r).abs()) / 2
+    ((a.q - b.q).abs() + (a.q + a.r - b.q - b.r).abs() + (a.r - b.r).abs()) / 2
 }
 
 pub fn enemy_ai(battle: &mut BattleState, enemy_index: usize) {
-    let target_hex = enemy_ai_move(battle, enemy_index); 
+    let target_hex = enemy_ai_move(battle, enemy_index);
     battle.enemies[enemy_index].hex = target_hex;
     battle.update_occupied_hexes();
 
-    let mut attackable_heroes: Vec<usize> = battle.heroes
+    let mut attackable_heroes: Vec<usize> = battle
+        .heroes
         .iter()
         .enumerate()
         .map(|(i, _)| i)
         .filter(|i| enemy_ai_can_attack_hero(battle, enemy_index, *i))
         .collect();
-    
+
     if let Some(&hero_index) = attackable_heroes.first() {
         enemy_ai_attack_hero(battle, enemy_index, hero_index);
     }
-
 }
 
 /// Move as close as possible to the closest hero.
@@ -39,14 +37,15 @@ pub fn enemy_ai_move(battle: &BattleState, enemy_index: usize) -> Hex {
         return enemy_hex;
     }
 
-    let hero_positions: Vec<(usize, Hex)> = battle.heroes
+    let hero_positions: Vec<(usize, Hex)> = battle
+        .heroes
         .iter()
         .enumerate()
         .map(|(i, h)| (i, h.hex))
         .collect();
 
     if hero_positions.is_empty() {
-        return enemy_hex; 
+        return enemy_hex;
     }
 
     let (closest_hero_index, closest_hero_hex) = hero_positions
@@ -54,12 +53,17 @@ pub fn enemy_ai_move(battle: &BattleState, enemy_index: usize) -> Hex {
         .min_by_key(|(_, h)| hex_distance(enemy_hex, *h))
         .unwrap();
 
-    let grid_boundary = Hex { q: battle.grid_width - 1, r: battle.grid_height - 1 };
+    let grid_boundary = Hex {
+        q: battle.grid_width - 1,
+        r: battle.grid_height - 1,
+    };
     let full_path = bfs_path(enemy_hex, closest_hero_hex, grid_boundary, battle);
 
     if full_path.is_empty() {
-        println!("Enemy {} at {:?} cannot find path to hero {} at {:?}", 
-            enemy_index, enemy_hex, closest_hero_index, closest_hero_hex);
+        println!(
+            "Enemy {} at {:?} cannot find path to hero {} at {:?}",
+            enemy_index, enemy_hex, closest_hero_index, closest_hero_hex
+        );
         return enemy_hex;
     }
 
@@ -85,10 +89,9 @@ pub fn enemy_ai_move(battle: &BattleState, enemy_index: usize) -> Hex {
         free_path.push(*hex);
     }
 
-
     // Only target in path
     if free_path.is_empty() {
-        return enemy_hex; 
+        return enemy_hex;
     }
 
     let steps_to_move = free_path.len().min(move_points as usize);
@@ -104,6 +107,10 @@ fn enemy_ai_can_attack_hero(battle: &BattleState, enemy_index: usize, hero_index
 }
 
 fn enemy_ai_attack_hero(battle: &mut BattleState, enemy_index: usize, hero_index: usize) {
-    battle.attack_unit(&UnitRef::Enemy(enemy_index), &UnitRef::Hero(hero_index), 1.0);
+    battle.attack_unit(
+        &UnitRef::Enemy(enemy_index),
+        &UnitRef::Hero(hero_index),
+        1.0,
+    );
     println!("Enemy {} attacks Hero {}!", enemy_index, hero_index);
 }

@@ -1,24 +1,22 @@
-mod battlestate;
-mod gamestate;
-mod character;
-mod item;
-mod effect;
-mod inventory;
-mod crafting;
-mod hexgrid;
-mod pathfinding;
 mod ai;
+mod battlestate;
+mod character;
+mod crafting;
+mod effect;
+mod gamestate;
+mod hexgrid;
+mod inventory;
+mod item;
+mod pathfinding;
 mod ui;
 
-
-use macroquad::prelude::*;
-use gamestate::GameState;
+use crate::character::*;
+use crate::effect::Effect;
+use crate::hexgrid::Hex;
 use crate::inventory::Inventory;
 use crate::ui::Assets;
-use crate::character::*;
-use crate::hexgrid::Hex;
-use crate::effect::Effect;
-
+use gamestate::GameState;
+use macroquad::prelude::*;
 
 #[macroquad::main("BigTask")]
 async fn main() {
@@ -26,7 +24,7 @@ async fn main() {
 
     let assets = Assets::load().await;
 
-    let fighter_stats = Stats{
+    let fighter_stats = Stats {
         max_hp: 100,
         hp: 75,
         damage: (10, 16),
@@ -48,14 +46,16 @@ async fn main() {
     let ranged = Ability {
         id: 1,
         name: "Bola Throw".to_string(),
-        description: "Throw a bola to entangle the target, reducing their movement. Range: 3 hexes.".to_string(),
+        description:
+            "Throw a bola to entangle the target, reducing their movement. Range: 3 hexes."
+                .to_string(),
         damage_modifier: 0.6,
         effect: Some(Effect::ReduceMovement(1, 2)), // reduce 1 movement for 2 turns
         range: 3,
     };
 
     let abilities = vec![melee, ranged];
-    
+
     state.player_party.push(Hero {
         id: 0,
         name: "Fighter".to_string(),
@@ -66,9 +66,6 @@ async fn main() {
         inventory: Inventory::new(),
         effects: Vec::new(),
     });
-
-
-
 
     state.assets = Some(assets);
 

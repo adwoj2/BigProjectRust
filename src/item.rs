@@ -1,8 +1,15 @@
-use serde::{Serialize, Deserialize};
 use crate::effect::Effect;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum ItemSlot { Head, Body, Boots, MainHand, OffHand, Accessory }
+pub enum ItemSlot {
+    Head,
+    Body,
+    Boots,
+    MainHand,
+    OffHand,
+    Accessory,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Item {

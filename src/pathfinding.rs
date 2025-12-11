@@ -1,10 +1,15 @@
-use crate::hexgrid::Hex;
-use std::collections::{VecDeque, HashMap, HashSet};
 use crate::battlestate::BattleState;
+use crate::hexgrid::Hex;
+use std::collections::{HashMap, HashSet, VecDeque};
 
 /// Return a map from reachable Hex -> (cost, path) using a breadth-first expansion limited by `movement`.
 /// Paths include the start as the first element and the target as the last.
-pub fn movement_range(start: Hex, movement: i32, grid_boundary: Hex, battle: &BattleState) -> HashMap<Hex, (i32, Vec<Hex>)> {
+pub fn movement_range(
+    start: Hex,
+    movement: i32,
+    grid_boundary: Hex,
+    battle: &BattleState,
+) -> HashMap<Hex, (i32, Vec<Hex>)> {
     if movement <= 0 {
         let mut map = HashMap::new();
         map.insert(start, (0, vec![start]));
@@ -44,20 +49,22 @@ pub fn movement_range(start: Hex, movement: i32, grid_boundary: Hex, battle: &Ba
 /// Hex neighbors for an odd-q vertical layout (keeps original odd/even logic).
 pub fn hex_neighbors(hex: Hex, grid_boundary: Hex) -> Vec<Hex> {
     // directions for even q and odd q (matching your original code)
-    const DIRECTIONS_EVEN: [(i32, i32); 6] = [
-        (0, -1), (1, -1), (1, 0),
-        (0, 1), (-1, 0), (-1, -1),
-    ];
+    const DIRECTIONS_EVEN: [(i32, i32); 6] = [(0, -1), (1, -1), (1, 0), (0, 1), (-1, 0), (-1, -1)];
 
-    const DIRECTIONS_ODD: [(i32, i32); 6] = [
-        (0, -1), (1, 0), (1, 1),
-        (0, 1), (-1, 1), (-1, 0),
-    ];
+    const DIRECTIONS_ODD: [(i32, i32); 6] = [(0, -1), (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0)];
 
-    let directions = if hex.q % 2 == 0 { &DIRECTIONS_EVEN } else { &DIRECTIONS_ODD };
+    let directions = if hex.q % 2 == 0 {
+        &DIRECTIONS_EVEN
+    } else {
+        &DIRECTIONS_ODD
+    };
 
-    directions.iter()
-        .map(|(dq, dr)| Hex { q: hex.q + dq, r: hex.r + dr })
+    directions
+        .iter()
+        .map(|(dq, dr)| Hex {
+            q: hex.q + dq,
+            r: hex.r + dr,
+        })
         .filter(|h| h.q >= 0 && h.r >= 0 && h.q <= grid_boundary.q && h.r <= grid_boundary.r)
         .collect()
 }
