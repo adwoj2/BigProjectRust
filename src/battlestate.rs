@@ -14,6 +14,12 @@ pub enum TurnPhase {
     End,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerrainType {
+    Rocks,
+    Water,
+}
+
 #[derive(Debug)]
 pub struct BattleState {
     pub heroes: Vec<HeroInstance>,
@@ -23,6 +29,9 @@ pub struct BattleState {
     pub active_unit: usize, // index into turn_order
 
     pub phase: TurnPhase,
+
+    pub terrain: HashMap<Hex, TerrainType>,
+    pub occupied_hexes: HashSet<Hex>,
 
     pub selected_unit: Option<UnitRef>,
     pub selected_unit_range: HashMap<Hex, (i32, Vec<Hex>)>,
@@ -76,7 +85,7 @@ impl BattleState {
                 let hex = self.heroes[idx].hex;
                 self.selected_unit = Some(unit);
                 self.selected_unit_range =
-                    movement_range(hex, movement, self.grid_bounds());
+                    movement_range(hex, movement, self.grid_bounds(), &self);
             }
 
             UnitRef::Enemy(idx) => {
@@ -114,6 +123,30 @@ impl BattleState {
 
     fn grid_bounds(&self) -> Hex {
         Hex { q: self.grid_width - 1, r: self.grid_height - 1 }
+    }
+
+    pub fn update_occupied_hexes(&mut self) {
+        self.occupied_hexes.clear();
+        for hero in &self.heroes {
+            self.occupied_hexes.insert(hero.hex);
+        }
+        for enemy in &self.enemies {
+            self.occupied_hexes.insert(enemy.hex);
+        }
+        println!("Updated occupied hexes: {:?}", self.occupied_hexes);
+    }
+
+    pub fn is_passable(&self, hex: Hex) -> bool {
+        !self.terrain.contains_key(&hex) &&
+        !self.occupied_hexes.contains(&hex)
+    }
+
+    pub fn is_passable_for_unit(&self, start: Hex, hex: Hex) -> bool {
+        if hex == start {
+            true 
+        } else {
+            self.is_passable(hex)
+        }
     }
 }
 
@@ -214,7 +247,11 @@ pub fn start_battle(state: &mut GameState) {
         enemies: enemies_instance,
         turn_order: Vec::new(),
         active_unit: 0,
+
         phase: TurnPhase::Start,
+        terrain: HashMap::new(),
+
+        occupied_hexes: HashSet::new(),
         selected_unit: None,
         selected_unit_range: HashMap::new(),
         grid_width: 10,
@@ -222,6 +259,12 @@ pub fn start_battle(state: &mut GameState) {
     };
 
     generate_turn_order(&mut battle);
+
+
+    battle.terrain.insert(Hex { q: 3, r: 4 }, TerrainType::Rocks);
+    battle.terrain.insert(Hex { q: 4, r: 4 }, TerrainType::Rocks);
+    battle.terrain.insert(Hex { q: 5, r: 2 }, TerrainType::Rocks);
+
     state.battle = Some(battle);
 
 }

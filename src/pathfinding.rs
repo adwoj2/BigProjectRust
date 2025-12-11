@@ -1,9 +1,10 @@
 use crate::hexgrid::Hex;
 use std::collections::{VecDeque, HashMap, HashSet};
+use crate::battlestate::BattleState;
 
 /// Return a map from reachable Hex -> (cost, path) using a breadth-first expansion limited by `movement`.
 /// Paths include the start as the first element and the target as the last.
-pub fn movement_range(start: Hex, movement: i32, grid_boundary: Hex) -> HashMap<Hex, (i32, Vec<Hex>)> {
+pub fn movement_range(start: Hex, movement: i32, grid_boundary: Hex, battle: &BattleState) -> HashMap<Hex, (i32, Vec<Hex>)> {
     if movement <= 0 {
         let mut map = HashMap::new();
         map.insert(start, (0, vec![start]));
@@ -17,7 +18,7 @@ pub fn movement_range(start: Hex, movement: i32, grid_boundary: Hex) -> HashMap<
 
     while let Some((hex, dist, path)) = frontier.pop_front() {
         // If we visited with a smaller or equal cost already, skip
-        if visited.contains_key(&hex) {
+        if visited.contains_key(&hex) || !battle.is_passable_for_unit(start, hex) {
             continue;
         }
 
@@ -63,7 +64,7 @@ pub fn hex_neighbors(hex: Hex, grid_boundary: Hex) -> Vec<Hex> {
 
 /// BFS shortest path that returns the sequence of Hex from start to goal (inclusive).
 /// Returns an empty vector if no path exists.
-pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex) -> Vec<Hex> {
+pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex, battle: &BattleState) -> Vec<Hex> {
     use std::collections::{HashMap, VecDeque};
 
     if start == goal {
@@ -79,7 +80,7 @@ pub fn bfs_path(start: Hex, goal: Hex, grid_boundary: Hex) -> Vec<Hex> {
 
     while let Some(current) = frontier.pop_front() {
         for neighbor in hex_neighbors(current, grid_boundary) {
-            if visited.contains(&neighbor) {
+            if visited.contains(&neighbor) || !battle.is_passable_for_unit(goal, neighbor) {
                 continue;
             }
 

@@ -1,21 +1,25 @@
 use macroquad::prelude::*;
 use crate::hexgrid::Hex;
 use crate::gamestate::{GameState, Screen};
-use crate::pathfinding::{bfs_path, movement_range};
-use crate::battlestate::{BattleState, UnitRef, start_battle};
+use crate::pathfinding::{movement_range};
+use crate::battlestate::{BattleState, UnitRef, TerrainType, start_battle};
+use std::collections::HashMap;
 
 pub struct Assets {
     pub hero: Texture2D,
     pub enemy: Texture2D,
+    pub rocks: Texture2D,
 }
 
 impl Assets {
     pub async fn load() -> Self {
         let hero = load_texture("assets/fighter.png").await.unwrap();
         let enemy = load_texture("assets/goblin.png").await.unwrap();
+        let rocks = load_texture("assets/rocks.png").await.unwrap();
         hero.set_filter(FilterMode::Nearest);   // optional: prevents blurry scaling
         enemy.set_filter(FilterMode::Nearest);
-        Self { hero, enemy }
+        rocks.set_filter(FilterMode::Nearest);
+        Self { hero, enemy, rocks }
     }
 }
 
@@ -98,6 +102,10 @@ async fn handle_battle_input(state: &mut GameState) {
 async fn draw_battlefield(state: &mut GameState) {
     let grid_boundary = Hex { q: GRID_WIDTH - 1, r: GRID_HEIGHT - 1 };
     let click_area = HEX_RADIUS * CLICK_AREA_FACTOR;
+    let assets = match &state.assets {
+        Some(a) => a,
+        None => return,
+    };
     let battle = match state.battle.as_mut() {
         Some(b) => b,
         None => return,
@@ -134,6 +142,7 @@ async fn draw_battlefield(state: &mut GameState) {
     // Draw units
     draw_units(&battle.heroes);
     draw_units(&battle.enemies);
+    draw_objects(&battle.terrain, assets);
 
     if battle.is_player_turn() {
         draw_end_turn_button(battle);
@@ -185,6 +194,32 @@ where
     });
 }
 
+fn draw_objects(terrain: &HashMap<Hex, TerrainType>, assets: &Assets) {
+    let rocks = &assets.rocks;
+
+    terrain.iter().for_each(|(hex, tile)| {
+        if *tile == TerrainType::Rocks {
+            let (x, y) = hex_to_screen(*hex);
+            draw_texture_ex(
+                rocks,
+                x - HEX_RADIUS * UNIT_SCALE,
+                y - HEX_RADIUS * UNIT_SCALE,
+                WHITE,
+                DrawTextureParams {
+                    dest_size: Some(vec2(HEX_RADIUS * 2.0 * UNIT_SCALE, HEX_RADIUS * 2.0 * UNIT_SCALE)),
+                    source: None,
+                    rotation: 0.0,
+                    flip_x: false,
+                    flip_y: false,
+                    pivot: None,
+                },
+            );
+        }
+    });
+}
+
+
+
 /// Trait to unify hero/enemy rendering data (no API changes required in other modules)
 trait UnitRender {
     fn hex(&self) -> Hex;
@@ -214,7 +249,7 @@ fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32
     {
         battle.selected_unit = Some(UnitRef::Hero(i));
         let mov = battle.heroes[i].current_movement;
-        battle.selected_unit_range = movement_range(battle.heroes[i].hex, mov, grid_boundary);
+        battle.selected_unit_range = movement_range(battle.heroes[i].hex, mov, grid_boundary, battle);
         return;
     }
 
@@ -229,7 +264,7 @@ fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32
     {
         battle.selected_unit = Some(UnitRef::Enemy(i));
         let mov = battle.enemies[i].current_movement;
-        battle.selected_unit_range = movement_range(battle.enemies[i].hex, mov, grid_boundary);
+        battle.selected_unit_range = movement_range(battle.enemies[i].hex, mov, grid_boundary,battle);
         return;
     }
 
@@ -241,9 +276,11 @@ fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32
                 if let Some(hero_inst) = battle.heroes.get_mut(hero_idx) {
                     hero_inst.current_movement -= *cost;
                     hero_inst.hex = target_hex;
+
                     // recompute reachable range from new position
                     let remaining = hero_inst.current_movement;
-                    battle.selected_unit_range = movement_range(target_hex, remaining, grid_boundary);
+                    battle.update_occupied_hexes();
+                    battle.selected_unit_range = movement_range(target_hex, remaining, grid_boundary, battle);
                 }
                 return;
             }

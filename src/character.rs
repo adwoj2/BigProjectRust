@@ -27,9 +27,6 @@ pub struct Hero {
     pub id: u32,
     pub name: String,
     
-    // #[serde(skip)]
-    // pub texture: Option<Texture2D>,
-
     pub hex: Hex,
     pub stats: Stats,
     pub xp: u64,
@@ -48,9 +45,6 @@ impl Hero {
 pub struct Enemy {
     pub id: u32,
     pub name: String,
-    
-    // #[serde(skip)]
-    // pub texture: Option<Texture2D>,
 
     pub hex: Hex,
     pub stats: Stats,

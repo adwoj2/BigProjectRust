@@ -33,7 +33,7 @@ async fn main() {
         dexterity: 12,
         intelligence: 4,
         defense: 11,
-        movement: 2,
+        movement: 4,
     };
     
     state.player_party.push(Hero {

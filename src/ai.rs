@@ -13,6 +13,7 @@ pub fn hex_distance(a: Hex, b: Hex) -> i32 {
 pub fn enemy_ai(battle: &mut BattleState, enemy_index: usize) {
     let target_hex = enemy_ai_choose_move(battle, enemy_index); // for now only move
     battle.enemies[enemy_index].hex = target_hex;
+    battle.update_occupied_hexes();
 }
 
 /// Enemy AI: move the enemy as close as possible to the closest hero.
@@ -50,7 +51,7 @@ pub fn enemy_ai_choose_move(battle: &BattleState, enemy_index: usize) -> Hex {
 
     // --- 2) Pathfind toward hero ---
     let grid_boundary = Hex { q: battle.grid_width - 1, r: battle.grid_height - 1 };
-    let full_path = bfs_path(enemy_hex, closest_hero_hex, grid_boundary);
+    let full_path = bfs_path(enemy_hex, closest_hero_hex, grid_boundary, battle);
 
     if full_path.is_empty() {
         println!("Enemy {} at {:?} cannot find path to hero {} at {:?}", 
