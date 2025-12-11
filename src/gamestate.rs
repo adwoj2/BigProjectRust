@@ -31,24 +31,6 @@ pub struct GameState {
     pub assets: Option<Assets>,
 }
 
-// impl GameState {
-//     pub fn get_unit(&self, uref: UnitRef) -> &impl UnitTrait {
-//         match uref {
-//             UnitRef::Hero(i) => &self.heroes[i],
-//             UnitRef::Enemy(i) => &self.enemies[i],
-//         }
-//     }
-
-//     pub fn get_unit_mut(&mut self, uref: UnitRef) -> &impl UnitTrait {
-//         match uref {
-//             UnitRef::Hero(i) => UnitViewMut::Hero(&mut self.heroes[i]),
-//             UnitRef::Enemy(i) => UnitViewMut::Enemy(&mut self.enemies[i]),
-//         }
-//     }
-// }
-
-
-
 impl GameState {
     pub fn new() -> Self {
         Self {
