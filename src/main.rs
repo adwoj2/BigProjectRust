@@ -61,7 +61,7 @@ async fn main() {
         hex: Hex { q: 2, r: 3 },
         stats: fighter_stats,
         xp: 0,
-        abilities: abilities,
+        abilities,
         inventory: Inventory::new(),
         effects: Vec::new(),
     });

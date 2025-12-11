@@ -353,10 +353,9 @@ fn handle_left_click(
 ) {
     match &battle.input_mode {
         InputMode::Normal => {
-            if let Some(_) = check_if_hero_clicked(battle, mx, my, click_area, grid_boundary) {
+            if check_if_hero_clicked(battle, mx, my, click_area, grid_boundary).is_some() {
                 battle.input_mode = InputMode::Movement;
-            } else if let Some(_) =
-                check_if_enemy_clicked(battle, mx, my, click_area, grid_boundary)
+            } else if check_if_enemy_clicked(battle, mx, my, click_area, grid_boundary).is_some()
             {
                 battle.input_mode = InputMode::Normal;
             } else {
@@ -525,7 +524,7 @@ pub fn screen_to_hex(x: f32, y: f32) -> Option<Hex> {
     let q = (2.0 / 3.0 * x / HEX_RADIUS).round() as i32;
     let r = ((y / (HEX_RADIUS * (3.0_f32.sqrt()))) - 0.5 * (q & 1) as f32).round() as i32;
     let hex = Hex { q, r };
-    if q >= 0 && q < GRID_WIDTH && r >= 0 && r < GRID_HEIGHT {
+    if (0..GRID_WIDTH).contains(&q) && (0..GRID_HEIGHT).contains(&r) {
         Some(hex)
     } else {
         None

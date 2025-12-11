@@ -96,7 +96,7 @@ impl BattleState {
                 hero.action_available = true;
                 let hex = self.heroes[idx].hex;
                 self.selected_unit = Some(unit);
-                self.selected_unit_range = movement_range(hex, movement, self.grid_bounds(), &self);
+                self.selected_unit_range = movement_range(hex, movement, self.grid_bounds(), self);
 
                 self.input_mode = InputMode::Movement;
             }

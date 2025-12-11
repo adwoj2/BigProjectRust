@@ -1,7 +1,6 @@
 use crate::effect::Effect;
 use crate::hexgrid::Hex;
 use crate::inventory::Inventory;
-use crate::item::Item;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 

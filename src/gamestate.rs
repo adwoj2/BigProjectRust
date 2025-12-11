@@ -2,20 +2,16 @@ pub use crate::battlestate::{BattleState};
 pub use crate::character::*;
 pub use crate::effect::*;
 pub use crate::inventory::*;
-pub use crate::item::*;
 pub use crate::ui::Assets;
 
 #[derive(PartialEq)]
+#[derive(Default)]
 pub enum Screen {
+    #[default]
     Menu,
     Battle,
 }
 
-impl Default for Screen {
-    fn default() -> Self {
-        Screen::Menu
-    }
-}
 
 #[derive(Default)]
 pub struct GameState {
