@@ -2,8 +2,6 @@ use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Effect {
-    Buff { stat: String, amount: i32, duration: u32 },
-    Debuff { stat: String, amount: i32, duration: u32 },
-    ExtraAction { actions: u32, duration: u32 },
-    Passive { name: String },
+    ReduceMovement(i32, i32), // amount, duration in turns
+    Poison(i32, i32),         // damage per turn, duration in turns
 }

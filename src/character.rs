@@ -15,10 +15,10 @@ pub enum Unit {
 pub struct Stats {
     pub max_hp: i32,
     pub hp: i32,
-    pub strength: i32,
-    pub dexterity: i32,
-    pub intelligence: i32,
+    pub damage: (i32, i32),
+    pub attack: i32,
     pub defense: i32,
+    pub initiative: i32,
     pub movement: i32,
 }
 
@@ -26,7 +26,7 @@ pub struct Stats {
 pub struct Hero {
     pub id: u32,
     pub name: String,
-    
+
     pub hex: Hex,
     pub stats: Stats,
     pub xp: u64,
@@ -56,4 +56,7 @@ pub struct Ability {
     pub id: u32,
     pub name: String,
     pub description: String,
+    pub damage_modifier: f32,
+    pub effect: Option<Effect>,  // optional effect on target
+    pub range: i32,              // number of hexes
 }

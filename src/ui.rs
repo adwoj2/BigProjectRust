@@ -2,23 +2,29 @@ use macroquad::prelude::*;
 use crate::hexgrid::Hex;
 use crate::gamestate::{GameState, Screen};
 use crate::pathfinding::{movement_range};
-use crate::battlestate::{BattleState, UnitRef, TerrainType, start_battle};
+use crate::battlestate::{BattleState, InputMode, UnitRef, TerrainType, start_battle};
 use std::collections::HashMap;
 
 pub struct Assets {
     pub hero: Texture2D,
-    pub enemy: Texture2D,
+    pub enemy: HashMap<String, Texture2D>,
     pub rocks: Texture2D,
 }
 
 impl Assets {
     pub async fn load() -> Self {
         let hero = load_texture("assets/fighter.png").await.unwrap();
-        let enemy = load_texture("assets/goblin.png").await.unwrap();
+        let goblin = load_texture("assets/goblin.png").await.unwrap();
+        let orc = load_texture("assets/orc.png").await.unwrap();
         let rocks = load_texture("assets/rocks.png").await.unwrap();
         hero.set_filter(FilterMode::Nearest);   // optional: prevents blurry scaling
-        enemy.set_filter(FilterMode::Nearest);
+        goblin.set_filter(FilterMode::Nearest);
+        orc.set_filter(FilterMode::Nearest);
         rocks.set_filter(FilterMode::Nearest);
+        let enemy = HashMap::from([
+            ("Goblin".to_string(), goblin),
+            ("Orc".to_string(), orc),
+        ]);
         Self { hero, enemy, rocks }
     }
 }
@@ -123,7 +129,7 @@ async fn draw_battlefield(state: &mut GameState) {
     }
 
     // Hover overlay + preview path tiles (pure view, no mutation)
-    if let Some(hover_hex) = screen_to_hex(mx, my, grid_boundary) {
+    if let Some(hover_hex) = screen_to_hex(mx, my) {
         draw_hex_overlay(hover_hex, Color::new(1.0, 0.1, 0.2, 0.35));
         if let Some(path_info) = battle.selected_unit_range.get(&hover_hex) {
             path_info.1.iter().for_each(|hex| {
@@ -148,15 +154,13 @@ async fn draw_battlefield(state: &mut GameState) {
         draw_end_turn_button(battle);
     }
 
+    let hud_clicked = draw_hud(battle);
+    
     // Handle input (selection & movement)
-    if is_mouse_button_pressed(MouseButton::Left) {
+    if !hud_clicked && is_mouse_button_pressed(MouseButton::Left) {
         handle_left_click(battle, mx, my, click_area, grid_boundary);
     }
 
-    // Draw selected unit name text (if any)
-    if let Some(selected_unit) = &battle.selected_unit {
-        draw_text(&format!("Selected: {}", battle.unit_name(selected_unit)), 50.0, 50.0, 30.0, BLACK);
-    }
 }
 
 /// Draw the hex grid using iterators
@@ -191,6 +195,7 @@ where
                 pivot: None,
             },
         );
+        draw_health_bar(x - HEX_RADIUS * UNIT_SCALE, y + HEX_RADIUS * UNIT_SCALE,HEX_RADIUS * 2.0 * UNIT_SCALE, 6.0, u.health_percent());
     });
 }
 
@@ -218,27 +223,152 @@ fn draw_objects(terrain: &HashMap<Hex, TerrainType>, assets: &Assets) {
     });
 }
 
+fn draw_hud(battle: &mut BattleState) -> bool {
+    let mut clicked = false;
+    
+    if let Some(UnitRef::Hero(idx)) = battle.selected_unit {
+        let hero = &battle.heroes[idx];
+        let button_width = 150.0;
+        let button_height = 40.0;
+        let spacing = 10.0;
+        let start_x = 50.0;
+        let y = screen_height() - 60.0;
+        let ability_color = if hero.action_available { GREEN } else { DARKGRAY };
+
+        // Draw ability buttons
+        for (i, ability) in hero.abilities.iter().enumerate() {
+            let x = start_x + i as f32 * (button_width + spacing);
+            let rect = Rect::new(x, y, button_width, button_height);
+
+            draw_rectangle(rect.x, rect.y, rect.w, rect.h, ability_color);
+            draw_text(&ability.name, rect.x + 10.0, rect.y + 25.0, 24.0, WHITE);
+
+            if hero.action_available && is_mouse_button_pressed(MouseButton::Left) {
+                let (mx, my) = mouse_position();
+                if rect.contains(vec2(mx, my)) {
+                    battle.selected_ability = Some(i);
+                    battle.input_mode = InputMode::AbilityTarget { hero_idx: idx, ability_idx: i };
+                    clicked = true;
+                }
+            }
+        }
+
+        if battle.selected_ability.is_some() {
+            let cancel_x = start_x + hero.abilities.len() as f32 * (button_width + spacing);
+            let cancel_rect = Rect::new(cancel_x, y, 50.0, button_height);
+
+            draw_rectangle(cancel_rect.x, cancel_rect.y, cancel_rect.w, cancel_rect.h, RED);
+            draw_text("X", cancel_rect.x + 18.0, cancel_rect.y + 26.0, 28.0, WHITE);
+
+            if is_mouse_button_pressed(MouseButton::Left) {
+                let (mx, my) = mouse_position();
+                if cancel_rect.contains(vec2(mx, my)) {
+                    battle.selected_ability = None;
+                    battle.input_mode = InputMode::Normal;
+                    clicked = true;
+                }
+            }
+        }
+    }
+
+    // Debug info
+    if let Some(selected_unit) = &battle.selected_unit {
+        draw_text(
+            &format!("Selected: {}", battle.unit_name(selected_unit)),
+            50.0, 50.0, 30.0, BLACK
+        );
+    }
+    if let Some(selected_ability) = &battle.selected_ability {
+        draw_text(
+            &format!("Selected Ability: {}", selected_ability),
+            50.0, 80.0, 30.0, RED
+        );
+    }
+
+    clicked
+}
 
 
 /// Trait to unify hero/enemy rendering data (no API changes required in other modules)
 trait UnitRender {
     fn hex(&self) -> Hex;
     fn texture(&self) -> &Texture2D;
+    fn health_percent(&self) -> f32;
 }
 
 impl UnitRender for crate::battlestate::HeroInstance {
     fn hex(&self) -> Hex { self.hex }
     fn texture(&self) -> &Texture2D { &self.texture }
+    fn health_percent(&self) -> f32 {
+        self.stats.hp as f32 / self.stats.max_hp as f32
+    }
 }
 
 impl UnitRender for crate::battlestate::EnemyInstance {
     fn hex(&self) -> Hex { self.hex }
     fn texture(&self) -> &Texture2D { &self.texture }
+    fn health_percent(&self) -> f32 { (self.stats.hp as f32 / self.stats.max_hp as f32).clamp(0.0, 1.0) }
 }
 
 /// Click handling is expressed mostly with functional helpers (find -> map -> mutate)
 fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32, grid_boundary: Hex) {
-    // try select a hero first
+    
+    match &battle.input_mode {
+        InputMode::Normal => {
+            // normal selection logic
+            if let Some(_) = check_if_hero_clicked(battle, mx, my, click_area, grid_boundary) { 
+                battle.input_mode = InputMode::Movement;
+            }
+            else if let Some(_) = check_if_enemy_clicked(battle, mx, my, click_area, grid_boundary) { 
+                battle.input_mode = InputMode::Normal;
+            }
+            else {
+                // only clear selection in Normal mode!
+                battle.selected_unit = None;
+                battle.selected_unit_range.clear();
+            }
+        }
+
+        InputMode::Movement => {
+            // clicking on a hex now means "move here"
+            if let Some(target_hex) = screen_to_hex(mx, my) {
+                if let Some((cost, path)) = battle.selected_unit_range.get(&target_hex) {
+                    // mutate hero: deduct movement and update position
+                    if let Some(UnitRef::Hero(hero_idx)) = battle.selected_unit {
+                        if let Some(hero_inst) = battle.heroes.get_mut(hero_idx) {
+                            hero_inst.current_movement -= *cost;
+                            hero_inst.hex = target_hex;
+
+                            // recompute reachable range from new position
+                            let remaining = hero_inst.current_movement;
+                            battle.update_occupied_hexes();
+                            battle.selected_unit_range = movement_range(target_hex, remaining, grid_boundary, battle);
+                        }
+                    }
+                }
+            }
+
+            battle.input_mode = InputMode::Normal;
+        }
+
+        InputMode::AbilityTarget { hero_idx, ability_idx } => {
+            // clicking on a hex now means "this is my target"
+            if let Some(selected_ability_idx) = battle.selected_ability {
+                if let Some(target_hex) = screen_to_hex(mx, my) {
+                    if let Some(UnitRef::Hero(hero_idx)) = battle.selected_unit {
+                        battle.hero_use_ability(hero_idx, selected_ability_idx, target_hex);
+                        return;
+                    }
+                }
+            }
+
+            battle.input_mode = InputMode::Movement;
+        }
+    }
+
+}
+
+fn check_if_hero_clicked(battle: &mut BattleState, mx: f32, my: f32, click_area: f32, grid_boundary: Hex) -> Option<usize> {
     if let Some((i, _)) = battle.heroes.iter()
         .enumerate()
         .find(|(_, hero)| {
@@ -250,10 +380,12 @@ fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32
         battle.selected_unit = Some(UnitRef::Hero(i));
         let mov = battle.heroes[i].current_movement;
         battle.selected_unit_range = movement_range(battle.heroes[i].hex, mov, grid_boundary, battle);
-        return;
+        return Some(i);
     }
+    None
+}
 
-    // then try select an enemy
+fn check_if_enemy_clicked(battle: &mut BattleState, mx: f32, my: f32, click_area: f32, grid_boundary: Hex) -> Option<usize> {
     if let Some((i, _)) = battle.enemies.iter()
         .enumerate()
         .find(|(_, enemy)| {
@@ -265,31 +397,9 @@ fn handle_left_click(battle: &mut BattleState, mx: f32, my: f32, click_area: f32
         battle.selected_unit = Some(UnitRef::Enemy(i));
         let mov = battle.enemies[i].current_movement;
         battle.selected_unit_range = movement_range(battle.enemies[i].hex, mov, grid_boundary,battle);
-        return;
+        return Some(i);
     }
-
-    // If a hero is selected and the click is on a reachable hex, move them
-    if let Some(UnitRef::Hero(hero_idx)) = battle.selected_unit {
-        if let Some(target_hex) = screen_to_hex(mx, my, grid_boundary) {
-            if let Some((cost, path)) = battle.selected_unit_range.get(&target_hex) {
-                // mutate hero: deduct movement and update position
-                if let Some(hero_inst) = battle.heroes.get_mut(hero_idx) {
-                    hero_inst.current_movement -= *cost;
-                    hero_inst.hex = target_hex;
-
-                    // recompute reachable range from new position
-                    let remaining = hero_inst.current_movement;
-                    battle.update_occupied_hexes();
-                    battle.selected_unit_range = movement_range(target_hex, remaining, grid_boundary, battle);
-                }
-                return;
-            }
-        }
-    }
-
-    // Clicking empty space clears selection
-    battle.selected_unit = None;
-    battle.selected_unit_range.clear();
+    None
 }
 
 fn draw_end_turn_button(battle: &mut BattleState) {
@@ -305,6 +415,20 @@ fn draw_end_turn_button(battle: &mut BattleState) {
     }
 }
 
+fn draw_health_bar(x: f32, y: f32, width: f32, height: f32, percent: f32) {
+    draw_rectangle(x, y, width, height, Color::new(0.1, 0.1, 0.1, 0.8));
+
+    let color = if percent > 0.5 {
+        let t = (percent - 0.5) * 2.0;
+        Color::new(1.0 - t, 1.0, 0.0, 1.0)
+    } else {
+        let t = percent * 2.0;
+        Color::new(1.0, t, 0.0, 1.0)
+    };
+
+    draw_rectangle(x, y, width * percent, height, color);
+}
+
 
 
 /// Draws a filled hex overlay at `hex`
@@ -314,26 +438,42 @@ fn draw_hex_overlay(hex: Hex, color: Color) {
 }
 
 /// Convert axial hex to screen coords (pure)
-fn hex_to_screen(hex: Hex) -> (f32, f32) {
-    // using odd-q vertical layout from original
-    let x = HEX_RADIUS * 3.0 / 2.0 * hex.q as f32 + GRID_OFFSET_X;
-    let y = HEX_RADIUS * (3.0f32.sqrt()) * (hex.r as f32 + 0.5 * (hex.q % 2) as f32) + GRID_OFFSET_Y;
+// TODOOOO
+pub fn hex_to_screen(hex: Hex) -> (f32, f32) {
+    let (battle_width, battle_height) = battlefield_pixel_size();
+
+    // Center the battlefield on the screen
+    let offset_x = screen_width() / 2.0 - battle_width / 2.0;
+    let offset_y = screen_height() / 2.0 - battle_height / 2.0;
+
+    let x = HEX_RADIUS * 3.0 / 2.0 * hex.q as f32 + offset_x + HEX_RADIUS;
+    let y = HEX_RADIUS * (3.0_f32.sqrt()) * (hex.r as f32 + 0.5 * (hex.q % 2) as f32) + offset_y + HEX_RADIUS;
+
     (x, y)
 }
 
 /// Convert screen pos to axial hex (pure)
-pub fn screen_to_hex(x: f32, y: f32, grid_boundary: Hex) -> Option<Hex> {
-    let x = x - GRID_OFFSET_X;
-    let y = y - GRID_OFFSET_Y;
+pub fn screen_to_hex(x: f32, y: f32) -> Option<Hex> {
+    let (battle_width, battle_height) = battlefield_pixel_size();
+    let offset_x = screen_width() / 2.0 - battle_width / 2.0;
+    let offset_y = screen_height() / 2.0 - battle_height / 2.0;
+
+    let x = x - offset_x - HEX_RADIUS;
+    let y = y - offset_y - HEX_RADIUS;
 
     let q = (2.0/3.0 * x / HEX_RADIUS).round() as i32;
     let r = ((y / (HEX_RADIUS * (3.0_f32.sqrt()))) - 0.5 * (q & 1) as f32).round() as i32;
-
     let hex = Hex { q, r };
-
-    if q >= 0 && q < grid_boundary.q && r >= 0 && r < grid_boundary.r {
+    if q >= 0 && q < GRID_WIDTH && r >= 0 && r < GRID_HEIGHT {
         Some(hex)
     } else {
         None
     }
+}
+
+
+fn battlefield_pixel_size() -> (f32, f32) {
+    let width = HEX_RADIUS * 3.0 / 2.0 * (GRID_WIDTH as f32 - 1.0) + 2.0 * HEX_RADIUS;
+    let height = HEX_RADIUS * (3.0_f32.sqrt()) * (GRID_HEIGHT as f32 + 0.5) + 2.0 * HEX_RADIUS;
+    (width, height)
 }

@@ -2,19 +2,16 @@ pub use crate::character::*;
 pub use crate::item::*;
 pub use crate::effect::*;
 pub use crate::inventory::*;
-pub use crate::battlefield::*;
 pub use crate::hexgrid::*;
 pub use crate::ui::Assets;
 pub use crate::battlestate::{BattleState, UnitRef};
 pub use std::collections::{HashSet};
-
 
 #[derive(PartialEq)]
 pub enum Screen {
     Menu,
     Battle,
 }
-
 
 impl Default for Screen {
     fn default() -> Self {
