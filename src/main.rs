@@ -1,4 +1,5 @@
 mod ai;
+mod battlefield;
 mod battlestate;
 mod character;
 mod crafting;
