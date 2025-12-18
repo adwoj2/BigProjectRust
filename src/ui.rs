@@ -124,7 +124,7 @@ async fn draw_battlefield(state: &mut GameState) {
     let (mx, my) = mouse_position();
 
     // Highlight currently selected unit
-    if let Some(unit) = &battle.selected_unit {
+    if let Some(unit) = battle.selected_unit {
         let hex = battle.unit_hex(unit);
         let (x, y) = hex_to_screen(hex);
         draw_poly_lines(x, y, 6, HEX_RADIUS - 1.0, 0.0, 3.0, BLUE);

@@ -12,7 +12,6 @@ pub enum Screen {
     Battle,
 }
 
-
 #[derive(Default)]
 pub struct GameState {
     pub battle: Option<BattleState>,
