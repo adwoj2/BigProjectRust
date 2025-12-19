@@ -23,3 +23,16 @@ macro_rules! early_return {
         }
     };
 }
+
+#[macro_export]
+macro_rules! unwrap_or_return {
+    ($opt:expr, $msg:expr) => {
+        match $opt {
+            Some(val) => val,
+            None => {
+                println!("{}", $msg);
+                return;
+            }
+        }
+    };
+}

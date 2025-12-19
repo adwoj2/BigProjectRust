@@ -4,12 +4,6 @@ use crate::inventory::Inventory;
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone)]
-pub enum Unit {
-    Hero(Hero),
-    Enemy(Enemy),
-}
-
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Stats {
     pub max_hp: i32,

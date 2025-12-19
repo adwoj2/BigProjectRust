@@ -1,5 +1,4 @@
-use std::collections::{HashMap, HashSet};
-use crate::hexgrid::Hex;
+use crate::battlestate::UnitRef;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Terrain {
@@ -9,11 +8,11 @@ pub enum Terrain {
     Water,
 }
 
-// Placeholder for later potential objects
+// Placeholder for later
 #[derive(Clone, Debug)]
 pub enum Object {
-    HealingShrine, 
-    Trap, 
+    HealingShrine,
+    Trap,
 }
 
 #[derive(Clone, Debug)]

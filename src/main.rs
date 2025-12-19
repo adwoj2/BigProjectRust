@@ -1,6 +1,8 @@
 mod ai;
+mod assets;
 mod battlefield;
 mod battlestate;
+mod button;
 mod character;
 mod crafting;
 mod effect;
@@ -8,14 +10,15 @@ mod gamestate;
 mod hexgrid;
 mod inventory;
 mod item;
+mod macros;
 mod pathfinding;
 mod ui;
 
+use crate::assets::Assets;
 use crate::character::*;
 use crate::effect::Effect;
 use crate::hexgrid::Hex;
 use crate::inventory::Inventory;
-use crate::ui::Assets;
 use gamestate::GameState;
 
 #[macroquad::main("BigTask")]
@@ -31,7 +34,7 @@ async fn main() {
         attack: 16,
         defense: 11,
         initiative: 12,
-        movement: 4,
+        movement: 2,
     };
 
     let melee = Ability {
