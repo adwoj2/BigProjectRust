@@ -103,7 +103,5 @@ pub fn bfs_path(start: Hex, goal: Hex, battle: &BattleState) -> Vec<Hex> {
             }
         }
     }
-    print!("XDXDXD ");
-
     vec![]
 }
